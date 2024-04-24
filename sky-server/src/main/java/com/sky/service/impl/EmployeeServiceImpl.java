@@ -9,19 +9,21 @@ import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
+import com.sky.exception.PasswordEditFailedException;
 import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
 import com.sky.service.EmployeeService;
-import lombok.val;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -136,7 +138,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public Employee getById(long id) {
         //调用Mapper进行数据处理
         Employee employee = employeeMapper.getById(id);
-        //加强密码的安全性,返回给前端的密码显示为*号
+        //加强密码的安全性,非明文显示
         employee.setPassword("*****");
         return employee;
     }
@@ -156,6 +158,57 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setUpdateUser(BaseContext.getCurrentId());
         //调用持久层
         employeeMapper.update(employee);
+    }
+
+    /**
+     * 修改密码
+     * @param passwordEditDTO
+     */
+    @Override
+    public void editPassword(PasswordEditDTO passwordEditDTO) {
+        //获取当前用户id,通过ThreadLocal来获取当前线程所对应的线程局部变量的值
+        Long currentId = BaseContext.getCurrentId();
+        //根据当前id进行数据库查询对应的员工密码信息
+        Employee currentUser = employeeMapper.getById(currentId);
+        //判断旧密码hash值是否相同,如果不同则抛出旧密码错误提示,StandardCharsets.UTF_8确保所有字符都能正确处理
+        if (!currentUser.getPassword().equals(DigestUtils.md5DigestAsHex(passwordEditDTO.getOldPassword().getBytes(StandardCharsets.UTF_8)))) {
+            throw new PasswordEditFailedException("旧密码错误!");
+        }
+
+        //判断新密码是否符合要求
+        if (!isValidPassword(passwordEditDTO.getNewPassword())) {
+            throw new PasswordEditFailedException("新密码格式不正确,密码长度应在6-20位，且包含数字和字母（区分大小写）!");
+        }
+        //如果满足,则更新密码
+        currentUser.setPassword(DigestUtils.md5DigestAsHex(passwordEditDTO.getNewPassword().getBytes(StandardCharsets.UTF_8)));
+        employeeMapper.update(currentUser);
+    }
+
+    private boolean isValidPassword(String password) {
+        // 密码长度应在6-20位之间
+        if (password.length() < 6 || password.length() > 20) {
+            return false;
+        }
+        // 密码包含数字和字母（区分大小写）
+        boolean hasDigit = false;
+        boolean hasLowercaseLetter = false;
+        boolean hasUppercaseLetter = false;
+        //增强for循环
+        for (char ch : password.toCharArray()) {
+            //ch依次表示password字符串数组的元素
+            if (Character.isDigit(ch)) {
+                hasDigit = true;
+            } else if (Character.isLowerCase(ch)) {
+                hasLowercaseLetter = true;
+            } else if (Character.isUpperCase(ch)) {
+                hasUppercaseLetter = true;
+            }
+            // 如果已经包含数字、小写字母和大写字母，则密码格式正确
+            if (hasDigit && hasLowercaseLetter && hasUppercaseLetter) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

@@ -28,4 +28,14 @@
         </set>
         where id = #{id}
     </update>
+
+    <update id="changePassword" parameterType="Employee">
+        update employee
+        <set>
+            <if test="oldPassword != null">oldPassword = #{newPassword}</if>
+        </set>
+        where id = #{empId}
+    </update>
+
+
 </mapper>
