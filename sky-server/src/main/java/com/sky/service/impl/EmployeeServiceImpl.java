@@ -113,7 +113,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     /**
-     *
+     * 启用或禁用员工
      * @param status
      * @param id
      */
@@ -124,6 +124,37 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setStatus(status);
         employee.setId(id);
         //调用Mapper层进行数据库处理
+        employeeMapper.update(employee);
+    }
+
+    /**
+     * 根据ID查询员工
+     * @param id
+     * @return
+     */
+    @Override
+    public Employee getById(long id) {
+        //调用Mapper进行数据处理
+        Employee employee = employeeMapper.getById(id);
+        //加强密码的安全性,返回给前端的密码显示为*号
+        employee.setPassword("*****");
+        return employee;
+    }
+
+    /**
+     * 修改员工信息
+     * @param employeeDTO
+     */
+    @Override
+    public void update(EmployeeDTO employeeDTO) {
+        Employee employee = new Employee();
+        //数据拷贝
+        BeanUtils.copyProperties(employeeDTO,employee);
+        //更新修改时间
+        employee.setUpdateTime(LocalDateTime.now());
+        //设置修改用户id
+        employee.setUpdateUser(BaseContext.getCurrentId());
+        //调用持久层
         employeeMapper.update(employee);
     }
 
