@@ -66,14 +66,6 @@ public interface DishMapper {
     void update(Dish dish);
 
     /**
-     * 根据id查询菜品
-     * @param id
-     * @return
-     */
-    @Select("select * from dish where id = #{id}")
-    DishVO getForId(Long id);
-
-    /**
      * 根据菜品id批量删除
      * @param ids
      */

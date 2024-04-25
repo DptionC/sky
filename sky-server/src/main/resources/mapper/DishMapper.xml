@@ -38,7 +38,7 @@
             <if test="updateTime != null"> update_time = #{updateTime},</if>
             <if test="updateUser != null"> update_user = #{updateUser}</if>
         </set>
-        where id = #{id} order by update_time desc
+        where id = #{id} order by create_time desc
     </update>
 
     <!--根据菜品id批量删除-->

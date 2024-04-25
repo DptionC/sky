@@ -86,13 +86,15 @@ public class DishController {
     @ApiOperation("根据id查询菜品")
     public Result<DishVO> getById(@PathVariable Long id) {
         log.info("根据id查询菜品:{}", id);
-        DishVO dish = dishService.getById(id);
-        return Result.success(dish);
+        DishVO dishVo = dishService.getById(id);
+        return Result.success(dishVo);
     }
 
     @PutMapping
     @ApiOperation("修改菜品")
-    public Result update(DishDTO dishDTO) {
-        return null;
+    public Result update(@RequestBody DishDTO dishDTO) {
+        log.info("修改菜品信息:{}",dishDTO);
+        dishService.updateWithFlavor(dishDTO);
+        return Result.success();
     }
 }
