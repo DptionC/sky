@@ -9,6 +9,7 @@ import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
 import com.sky.exception.DeletionNotAllowedException;
+import com.sky.mapper.CategoryMapper;
 import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetmealDishMapper;
@@ -43,14 +44,13 @@ public class DishServiceImpl implements DishService {
      * 新增菜品和对应口味
      * @param dishDTO
      */
-    @Transactional //确保插入数据的一致性，添加事务注解
+    @Transactional //确保插入数据的一致性，添加事务注解,要么全成功,要么全失败
     @Override
     public void insertWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO,dish);
         //1.向菜品表插入一条数据
         dishMapper.insert(dish);
-
         //获取insert语句生成的主键值
         Long dishId = dish.getId();
 
@@ -59,10 +59,10 @@ public class DishServiceImpl implements DishService {
         //判断口味表是否为空
         if (flavors != null && flavors.size() > 0) {
             //遍历传递进来的口味信息，对里面的dishId进行赋值
-            for (DishFlavor flavor : flavors) {
+            flavors.forEach(flavor -> {
                 flavor.setDishId(dishId);
-            }
-            //2.向口味表插入n条数据
+            });
+            //插入口味表
             dishFlavorMapper.insertBatch(flavors);
         }
     }
@@ -131,6 +131,11 @@ public class DishServiceImpl implements DishService {
         dishMapper.update(dish);
     }
 
+    /**
+     * 根据id查询菜品
+     * @param id
+     * @return
+     */
     @Override
     public DishVO getById(Long id) {
         //根据id查询菜品数据
@@ -144,6 +149,11 @@ public class DishServiceImpl implements DishService {
         return dishVO;
     }
 
+    /**
+     * 修改菜品
+     * @param dishDTO
+     */
+    @Transactional
     @Override
     public void updateWithFlavor(DishDTO dishDTO) {
         //修改菜品基本信息
@@ -156,11 +166,28 @@ public class DishServiceImpl implements DishService {
         List<DishFlavor> flavors = dishDTO.getFlavors();
         if (flavors != null && flavors.size() > 0) {
             //遍历传递进来的口味信息，对里面的dishId进行赋值
-            for (DishFlavor flavor : flavors) {
+            flavors.forEach(flavor -> {
                 flavor.setDishId(dishDTO.getId());
-            }
-            //2.向口味表插入n条数据
+            });
+            //插入口味表
             dishFlavorMapper.insertBatch(flavors);
         }
+    }
+
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
+    @Override
+    public List<Dish> getByCategoryIdtoDish(Long categoryId) {
+        Dish dish = new Dish();
+        //设置菜品中的分类id设置为需要查询的分类id
+        dish.setCategoryId(categoryId);
+        //并设置菜品为启售状态
+        dish.setStatus(StatusConstant.ENABLE);
+        //最后将查询到的结果用泛型为Dish实体类的数组封装返回
+        List<Dish> dishList = dishMapper.getByCategoryIdtoDish(dish);
+        return dishList;
     }
 }

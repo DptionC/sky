@@ -11,15 +11,13 @@ import com.sky.context.BaseContext;
 import com.sky.enumeration.OperationType;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.sql.Time;
 import java.time.LocalDateTime;
 
 /**
@@ -36,8 +34,9 @@ public class AutoFillAspect {
         前者锁定mapper下所有的类和方法,同时需要满足添加了@AutoFill的注解
         如果直接使用@annotation,会扫描包下全部,而加上execution就是锁定某一个扫描文件
      */
-    @Pointcut("execution(* com.sky.mapper.*.*(..)) && @annotation(com.sky.annotation.AutoFill)" )
-    public void autoFillPointCut() {}
+    @Pointcut("execution(* com.sky.mapper.*.*(..)) && @annotation(com.sky.annotation.AutoFill)")
+    public void autoFillPointCut() {
+    }
 
     /**
      * 前置通知,在通知中进行公共字段进行赋值
@@ -81,7 +80,7 @@ public class AutoFillAspect {
                 e.printStackTrace();
             }
 
-        } else if (operationType == OperationType.UPDATE){
+        } else if (operationType == OperationType.UPDATE) {
             //为2个公共字段赋值
             try {
                 Method setUpdateTime = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_UPDATE_TIME, LocalDateTime.class);

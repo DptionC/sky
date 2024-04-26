@@ -1,5 +1,8 @@
 package com.sky.mapper;
 
+import com.sky.annotation.AutoFill;
+import com.sky.entity.SetmealDish;
+import com.sky.enumeration.OperationType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -19,4 +22,19 @@ public interface SetmealDishMapper {
      * @return
      */
     List<Long> getSetmealIdByDishId(List<Long> dishIds);
+
+    /**
+     * 批量插入套餐菜品关联信息
+     * @param setmealDishes
+     */
+    @AutoFill(OperationType.INSERT)
+    void insertBatch(List<SetmealDish> setmealDishes);
+
+    /**
+     * 根据套餐id查询对应的菜品id
+     * @param setmealId
+     * @return
+     */
+    @Select("select * from setmeal_dish where setmeal_id = #{setmealId}")
+    List<SetmealDish> getBySetmealId(Long setmealId);
 }

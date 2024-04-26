@@ -23,7 +23,7 @@
                 and status = #{status}
             </if>
         </where>
-        order by create_time desc
+        order by create_time desc,update_time asc
     </select>
     <!--修改菜品信息-->
     <update id="update">
@@ -48,4 +48,25 @@
             #{id}
         </foreach>
     </delete>
+    <!--根据分类id查询菜品-->
+    <select id="getByCategoryIdtoDish" resultType="com.sky.entity.Dish" parameterType="com.sky.entity.Dish">
+        select * from dish
+        <where>
+            <if test="name != null">
+                name like concat('%',#{name},'%')
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="getBySetmealId" resultType="com.sky.entity.Dish">
+        select * from dish d left join setmeal_dish sd on d.id = sd.dish_id
+        where sd.setmeal_id = #{setmealId}
+    </select>
 </mapper>
