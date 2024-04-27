@@ -5,6 +5,8 @@ import com.sky.dto.SetmealPageQueryDTO;
 import com.sky.result.PageResult;
 import com.sky.vo.SetmealVO;
 
+import java.util.List;
+
 /**
  * @Autor：林建威
  * @DateTime：2024/4/26 9:13
@@ -37,4 +39,16 @@ public interface SetmealService {
      * @param id
      */
     SetmealVO getById(Long id);
+
+    /**
+     * 修改套餐
+     * @param setmealDTO
+     */
+    void update(SetmealDTO setmealDTO);
+
+    /**
+     * 删除套餐及批量删除套餐
+     * @param ids
+     */
+    void deleteBySetmealId(List<Long> ids);
 }

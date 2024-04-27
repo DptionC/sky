@@ -10,6 +10,7 @@ import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
 import com.sky.entity.Setmeal;
 import com.sky.entity.SetmealDish;
+import com.sky.exception.DeletionNotAllowedException;
 import com.sky.exception.SetmealEnableFailedException;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetmealDishMapper;
@@ -21,6 +22,7 @@ import com.sky.vo.SetmealVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -43,6 +45,7 @@ public class SetmealServiceImpl implements SetmealService {
      * 新增套餐
      * @param setmealDTO
      */
+    @Transactional //开始事务，要么全部失败要么全部成功
     @Override
     public void insert(SetmealDTO setmealDTO) {
         //数据拷贝到实体中传入数据库
@@ -54,6 +57,7 @@ public class SetmealServiceImpl implements SetmealService {
 
         //获取传递进来的套餐菜品
         List<SetmealDish> setmealDishes = setmealDTO.getSetmealDishes();
+        System.out.println(setmealDishes);
         for (SetmealDish setmealDish : setmealDishes) {
             //setmealDish依次表示setmealDishes菜品中的元素,并将设置为当前插入的主键值
             setmealDish.setSetmealId(setmealId);
@@ -110,11 +114,66 @@ public class SetmealServiceImpl implements SetmealService {
         //根据id获取套餐信息
         Setmeal setmeal = setmealMapper.getById(id);
         //根据套餐id查询对应的菜品
-        List<SetmealDish> setmealDish = setmealDishMapper.getBySetmealId(id);
+        List<SetmealDish> setmealDishes = setmealDishMapper.getBySetmealId(id);
         //封装查询结果
         SetmealVO setmealVO = new SetmealVO();
         BeanUtils.copyProperties(setmeal,setmealVO);
-        setmealVO.setSetmealDishes(setmealDish);
+        setmealVO.setSetmealDishes(setmealDishes);
         return setmealVO;
+    }
+
+    /**
+     * 修改套餐
+      * @param setmealDTO
+     */
+    @Transactional //事务开启，要么全成功，要么全失败
+    @Override
+    public void update(SetmealDTO setmealDTO) {
+        Setmeal setmeal = new Setmeal();
+        //数据拷贝
+        BeanUtils.copyProperties(setmealDTO,setmeal);
+        //跟新数据
+        setmealMapper.update(setmeal);
+        //获取当前套餐id
+        Long setmealId = setmealDTO.getId();
+        //根据当前套餐id删除对应的菜品信息
+        setmealDishMapper.deleteDishBySetmealId(setmealId);
+
+        //重新插入关联的菜品
+        List<SetmealDish> setmealDishes = setmealDTO.getSetmealDishes();
+        if (setmealDishes != null & setmealDishes.size() > 0) {
+            for (SetmealDish setmealDish : setmealDishes) {
+                //setmealDish依次表示setmealDishes菜品中的元素,并将设置为当前插入的主键值
+                setmealDish.setSetmealId(setmealId);
+            }
+            //批量将套餐和菜品插入到套餐菜品表中
+            setmealDishMapper.insertBatch(setmealDishes);
+        }
+
+    }
+
+    /**
+     * 删除套餐及批量删除套餐
+     * @param ids
+     */
+    @Transactional
+    @Override
+    public void deleteBySetmealId(List<Long> ids) {
+        //遍历输入的ids
+        for (Long id : ids) {
+            //id依次表示数组中的每一个元素
+            Setmeal setmealId = setmealMapper.getById(id);
+            //判断套餐是否为启售状态,启售状态无法删除
+            if (setmealId.getStatus() == StatusConstant.ENABLE) {
+                throw new DeletionNotAllowedException(MessageConstant.SETMEAL_ON_SALE);
+            }
+        }
+        //遍历输入的ids
+        for (Long setmealId : ids) {
+            //setmealId依次表示数组中的每一个id，并根据遍历的id进行删除套餐信息
+            setmealMapper.deleteBySetmealId(setmealId);
+            //根据套餐id删除套餐菜品表中的相应信息
+            setmealDishMapper.deleteDishBySetmealId(setmealId);
+        }
     }
 }
