@@ -14,8 +14,8 @@
         select s.*,c.name categoryName  from setmeal s left join category c on s.category_id = c.id
         <where>
             <if test="name != null"> name like concat('%',#{name},'%')</if>
-            <if test="name != null"> and category_id = #{categoryId}</if>
-            <if test="name != null"> and status = #{status}</if>
+            <if test="categoryId != null"> and category_id = #{categoryId}</if>
+            <if test="status != null"> and status = #{status}</if>
         </where>
         order by s.create_time desc
     </select>
@@ -35,4 +35,19 @@
         </set>
         where id = #{id}
     </update>
+
+    <!--根据分类id查询套餐-->
+    <select id="getSetmealByCategoryId" resultType="com.sky.entity.Setmeal">
+        select * from setmeal
+        <where>
+        <if test="name != null"> name like concat('%',#{name},'%')</if>
+        <if test="categoryId != null"> and category_id = #{categoryId}</if>
+        <if test="status != null"> and status = #{status}</if>
+        </where>
+    </select>
+    <select id="getDishItemBySetmealId" resultType="com.sky.vo.DishItemVO">
+        select sd.name, sd.copies, d.image, d.description from
+        setmeal_dish sd left join dish d on sd.dish_id = d.id
+        where sd.setmeal_id = #{setmealId}
+    </select>
 </mapper>

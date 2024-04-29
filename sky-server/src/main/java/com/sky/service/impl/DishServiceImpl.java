@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.image.BandCombineOp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -209,5 +210,30 @@ public class DishServiceImpl implements DishService {
         //最后将查询到的结果用泛型为Dish实体类的数组封装返回
         List<Dish> dishList = dishMapper.getByCategoryIdtoDish(dish);
         return dishList;
+    }
+
+    /**
+     * 根据分类id查询菜品
+     * @param dish
+     * @return
+     */
+    @Override
+    public List<DishVO> listWithFlavor(Dish dish) {
+        List<Dish> dishList = dishMapper.getByCategoryIdtoDish(dish);
+        List<DishVO> dishVoList = new ArrayList<>();
+        //数据拷贝
+        for (Dish d : dishList) {
+            //创建一个视图对象
+            DishVO dishVO = new DishVO();
+            //d依次表示每一个菜品信息,复制到dishVO中
+            BeanUtils.copyProperties(d,dishVO);
+            //根据菜品id查询对应的口味
+            List<DishFlavor> flavors = dishFlavorMapper.getByDishId(d.getId());
+            dishVO.setFlavors(flavors);
+            //将结果插入到DishVO数组中
+            dishVoList.add(dishVO);
+        }
+
+        return dishVoList;
     }
 }
