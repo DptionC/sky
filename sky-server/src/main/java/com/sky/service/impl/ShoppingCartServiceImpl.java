@@ -10,11 +10,13 @@ import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetmealMapper;
 import com.sky.mapper.ShoppingCartMapper;
+import com.sky.result.Result;
 import com.sky.service.ShoppingCartService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.awt.geom.RectangularShape;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -83,6 +85,62 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
             //如果添加的菜品有口味，在前端发起请求已经携带到后端了，并且数据拷贝给了shoppingcart中，
             //然后再list方法中进行数据库查询，如果发现没有相同口味的数据，则当成新得菜品进行插入数据库
             shoppingCartMapper.insert(shoppingCart);
+        }
+    }
+
+    /**
+     * 查看购物车
+     * @return
+     */
+    @Override
+    public List<ShoppingCart> showShoppingCart() {
+        //获取当前登录用户id
+        Long userId = BaseContext.getCurrentId();
+        ShoppingCart shoppingCart = new ShoppingCart();
+        shoppingCart.setUserId(userId);
+        //根据当前用户id查看当前购物车信息
+        List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
+        return list;
+    }
+
+    /**
+     * 清空购物车
+     */
+    @Override
+    public void cleanShoppingCart() {
+        //获取当前登录用户id
+        Long userId = BaseContext.getCurrentId();
+        shoppingCartMapper.deleteByUserId(userId);
+    }
+
+    /**
+     * 减少购物车中菜品或套餐得数量
+     * @param shoppingCartDTO
+     * @return
+     */
+    @Override
+    public void subShoppingCart(ShoppingCartDTO shoppingCartDTO) {
+        ShoppingCart shoppingCart = new ShoppingCart();
+        BeanUtils.copyProperties(shoppingCartDTO, shoppingCart);
+        //获取当前登录用户id
+        Long userId = BaseContext.getCurrentId();
+        shoppingCart.setUserId(userId);
+        //通过用户id获取当前购物车信息
+        List<ShoppingCart> goodsList = shoppingCartMapper.list(shoppingCart);
+        if (goodsList != null && goodsList.size() > 0) {
+            //获取数据
+            ShoppingCart cart = goodsList.get(0);
+            //获取当前的菜品或套餐的数量
+            Integer number = cart.getNumber();
+            if (number == 1) {
+                //如果当前商品数量为1，则直接删除
+                shoppingCartMapper.deleteByUserId(userId);
+            }else {
+                //如果当前商品数量>1，则减少数量
+                cart.setNumber(cart.getNumber() - 1);
+                //跟新数量到数据库
+                shoppingCartMapper.updateNumberById(cart);
+            }
         }
     }
 }
