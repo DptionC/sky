@@ -1,8 +1,10 @@
 package com.sky.service.impl;
 
-import com.alibaba.fastjson.JSONObject;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
+import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.entity.*;
@@ -10,10 +12,12 @@ import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.*;
+import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderSubmitVO;
+import com.sky.vo.OrderVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @Autor：林建威
@@ -47,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 用户下单
+     *
      * @param ordersSubmitDTO
      * @return
      */
@@ -70,7 +77,7 @@ public class OrderServiceImpl implements OrderService {
 
         //2.向订单表插入一条数据
         Orders orders = new Orders();
-        BeanUtils.copyProperties(ordersSubmitDTO,orders);
+        BeanUtils.copyProperties(ordersSubmitDTO, orders);
         orders.setOrderTime(LocalDateTime.now());
         orders.setUserId(userId);
         orders.setConsignee(addressBook.getConsignee());
@@ -106,6 +113,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 订单支付
+     *
      * @param ordersPaymentDTO
      * @return
      */
@@ -139,6 +147,11 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
+    /**
+     * 根绝订单号查询订单
+     *
+     * @param outTradeNo
+     */
     @Override
     public void paySuccess(String outTradeNo) {
         // 根据订单号查询订单
@@ -154,4 +167,129 @@ public class OrderServiceImpl implements OrderService {
 
         orderMapper.update(orders);
     }
+
+    /**
+     * 用户端订单分页查询
+     *
+     * @param pageNum
+     * @param pageSize
+     * @param status   订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+     * @return
+     */
+    @Override
+    public PageResult pageQuery4User(int pageNum, int pageSize, Integer status) {
+        //设置分页
+        PageHelper.startPage(pageNum, pageSize);
+        //创建一个分页查询数据传输对象
+        OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
+        //获取当前登录用户id设置为当前分页查询的用户
+        ordersPageQueryDTO.setUserId(BaseContext.getCurrentId());
+        //设置状态为当前前端传递进来的状态参数
+        ordersPageQueryDTO.setStatus(status);
+        //设置分页条件
+        Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
+        //创建一个泛型是订单视图对象的集合
+        List<OrderVO> list = new ArrayList<>();
+        //判断分页查询的结果数据是否为空
+        if (page != null && page.getTotal() > 0) {
+            for (Orders order : page) {
+                System.out.println(order);
+                //orders依次表示分页查询结果中的每一条数据，获取订单id
+                Long orderId = order.getId();
+                //根据订单id查询订单详情，因为可能返回多条数据，所以使用集合
+                List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(orderId);
+                //新建一个订单视图对象
+                OrderVO orderVO = new OrderVO();
+                //数据拷贝
+                BeanUtils.copyProperties(order, orderVO);
+                //设置订单详情
+                orderVO.setOrderDetailList(orderDetails);
+                //将结果插入到集合中
+                list.add(orderVO);
+            }
+        }
+        return new PageResult(page.getTotal(), list);
+    }
+
+    /**
+     * 根据订单id获取订单详情
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public OrderVO getOrderDetailByOrderId(Long id) {
+        //根据id查询订单信息
+        Orders orders = orderMapper.getByOrderId(id);
+        //根据订单id查询订单详情
+        List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(id);
+        //将查询到的结果封装成ordervo
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders, orderVO);
+        orderVO.setOrderDetailList(orderDetails);
+        //返回封装结果
+        return orderVO;
+    }
+
+    /**
+     * 取消订单
+     *
+     * @param id
+     */
+    @Override
+    public void cancel(Long id) {
+        //首先根据订单id获取订单状态
+        Orders orderDB = orderMapper.getByOrderId(id);
+        //校验订单是否存在
+        if (orderDB == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+        Integer status = orderDB.getStatus();
+        //判断订单状态是否为待付款或则待接单，如是则直接取消，如果是待接单状态下还得进行退款
+        if (status > 2) {
+            //如果订单大于2,则抛出错误
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        //创建一个order对象
+        Orders orders = new Orders();
+        orders.setId(orderDB.getId());
+        if (orderDB.equals(Orders.TO_BE_CONFIRMED)) {
+            orders.setPayStatus(Orders.REFUND);
+        }
+        //取消订单后则需要修改状态为已取消
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消订单!");
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 当前订单再来一单
+     *
+     * @param id
+     */
+    @Transactional
+    @Override
+    public void getByOrderId(Long id) {
+        //获取当前用户id
+        Long userId = BaseContext.getCurrentId();
+        //根据订单id查询订单详情
+        List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(id);
+        //使用流将订单详情顶对象转换成购物车对象,map对stream流中的元素操作,并将操作结果映射为新的元素
+        List<ShoppingCart> shoppingCartList = orderDetails.stream().map(orderDetail -> {
+                    ShoppingCart shoppingCart = new ShoppingCart();
+                    //数据拷贝,但是忽略"id"的属性不进行拷贝
+                    BeanUtils.copyProperties(orderDetail, shoppingCart, "id");
+                    //设置当前用户id
+                    shoppingCart.setUserId(userId);
+                    shoppingCart.setCreateTime(LocalDateTime.now());
+                    return shoppingCart;
+                }).collect(Collectors.toList());//终止stream流,并通过Collectors.toList()将stream流中的元素收集到一个List集合中
+
+        //将购物车对象批量插入到数据库中
+        shoppingCartMapper.insertBatch(shoppingCartList);
+    }
+
+
 }
