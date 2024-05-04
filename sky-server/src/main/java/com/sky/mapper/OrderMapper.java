@@ -2,13 +2,10 @@ package com.sky.mapper;
 
 import com.github.pagehelper.Page;
 import com.sky.dto.OrdersPageQueryDTO;
-import com.sky.entity.OrderDetail;
 import com.sky.entity.Orders;
-import com.sky.result.PageResult;
+import com.sky.vo.OrderStatisticsVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
-
-import java.util.List;
 
 /**
  * @Autor：林建威
@@ -49,4 +46,12 @@ public interface OrderMapper {
      */
     @Select("select * from orders where id = #{id}")
     Orders getByOrderId(Long id);
+
+
+    /**
+     * 统计各个状态的订单数量
+     * @param status
+     */
+    @Select("select count(id) from orders where status = #{status}")
+    Integer CountByStatus(Integer status);
 }
