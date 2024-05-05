@@ -4,6 +4,7 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.service.ReportService;
 import com.sky.vo.TurnoverReportVO;
+import com.sky.vo.UserReportVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -71,5 +72,53 @@ public class ReportServiceImpl implements ReportService {
         turnoverReportVO.setDateList(StringUtils.join(dateList, ","));
         turnoverReportVO.setTurnoverList(StringUtils.join(turnoverList, ","));
         return turnoverReportVO;
+    }
+
+    /**
+     * 统计指定时间区间内的营业额数据
+     * @param begin
+     * @param end
+     * @return
+     */
+    @Override
+    public UserReportVO userStatistics(LocalDate begin, LocalDate end) {
+        //创建一个集合用来存储begin和end的时间范围
+        List<LocalDate> dateList = new ArrayList<>();
+        //设置开始时间
+        dateList.add(begin);
+        //设置循环,当begin=end时,结束循环
+        while (!begin.equals(end)) {
+            begin = begin.plusDays(1);
+            dateList.add(begin);
+        }
+
+        //存放每天总用户数量
+        List<Integer> totalUserList = new ArrayList<>();
+        //存放每天新增用户数量
+        List<Integer> newUserList = new ArrayList<>();
+        for (LocalDate date : dateList) {
+            LocalDateTime beginTime = LocalDateTime.of(date, LocalTime.MIN);
+            LocalDateTime endTime = LocalDateTime.of(date, LocalTime.MAX);
+
+            Map map = new HashMap();
+            //先对总用户数量进行统计
+            map.put("end", endTime);
+            Integer totalUser = orderMapper.countByMap(map);
+
+            //在对新增用户进行统计
+            map.put("begin", beginTime);
+            Integer newUser = orderMapper.countByMap(map);
+
+            //将结果查插入响应集合中
+            totalUserList.add(totalUser);
+            newUserList.add(newUser);
+        }
+
+        //封装结果返回,并用逗号进行分隔
+        return UserReportVO.builder()
+                .dateList(StringUtils.join(dateList, ","))
+                .newUserList(StringUtils.join(newUserList, ","))
+                .totalUserList(StringUtils.join(totalUserList, ","))
+                .build();
     }
 }

@@ -68,10 +68,15 @@ public interface OrderMapper {
     List<Orders> getByStatusAndOrderTimeLT(Integer status, LocalDateTime orderTime);
 
     /**
-     * 获取当天营业额
+     * 使用动态SQL统计获取当天营业额
      * @param map
      * @return
      */
     Double getByMap(Map map);
 
+    /**
+     * 使用动态SQL统计用户数量
+     * @param map
+     */
+    Integer countByMap(Map map);
 }
