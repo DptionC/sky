@@ -172,12 +172,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee currentUser = employeeMapper.getById(currentId);
         //判断旧密码hash值是否相同,如果不同则抛出旧密码错误提示,StandardCharsets.UTF_8确保所有字符都能正确处理
         if (!currentUser.getPassword().equals(DigestUtils.md5DigestAsHex(passwordEditDTO.getOldPassword().getBytes(StandardCharsets.UTF_8)))) {
-            throw new PasswordEditFailedException("旧密码错误!");
+            throw new PasswordEditFailedException(MessageConstant.PASSWORD_ERROR);
         }
 
         //判断新密码是否符合要求
         if (!isValidPassword(passwordEditDTO.getNewPassword())) {
-            throw new PasswordEditFailedException("新密码格式不正确,密码长度应在6-20位，且包含数字和字母（区分大小写）!");
+            throw new PasswordEditFailedException(MessageConstant.PASSWORD_EDIT_FAILED);
         }
         //如果满足,则更新密码
         currentUser.setPassword(DigestUtils.md5DigestAsHex(passwordEditDTO.getNewPassword().getBytes(StandardCharsets.UTF_8)));
