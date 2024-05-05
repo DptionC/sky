@@ -71,15 +71,8 @@ public interface OrderMapper {
     /**
      * 使用动态SQL统计获取当天营业额
      * @param map
-     * @return
      */
-    Double getByMap(Map map);
-
-    /**
-     * 使用动态SQL统计用户数量
-     * @param map
-     */
-    Integer sumByMap(Map map);
+    Double sumByMap(Map map);
 
     /**
      * 使用动态SQL统计订单数量

@@ -3,6 +3,7 @@ package com.sky.service.impl;
 import com.sky.dto.GoodsSalesDTO;
 import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
+import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
 import com.sky.vo.*;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +26,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private OrderMapper orderMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     /**
      * 统计指定时间区间内的营业额数据
@@ -59,7 +62,7 @@ public class ReportServiceImpl implements ReportService {
             map.put("begin", beginTime);
             map.put("end", endTime);
             map.put("status", Orders.COMPLETED);
-            Double turnover = orderMapper.getByMap(map);
+            Double turnover = orderMapper.sumByMap(map);
             //如果当天营业额为0,那么统计出来的是null,所以要进行转换成0
             turnover = turnover == null ? 0.0 : turnover; //如果是空,则返回0.0,不为空则返回自身 再赋予回自身
             turnoverList.add(turnover);
@@ -101,11 +104,11 @@ public class ReportServiceImpl implements ReportService {
             Map map = new HashMap();
             //先对总用户数量进行统计
             map.put("end", endTime);
-            Integer totalUser = orderMapper.sumByMap(map);
+            Integer totalUser = userMapper.countByMap(map);
 
             //在对新增用户进行统计
             map.put("begin", beginTime);
-            Integer newUser = orderMapper.sumByMap(map);
+            Integer newUser = userMapper.countByMap(map);
 
             //将结果查插入响应集合中
             totalUserList.add(totalUser);
