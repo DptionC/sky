@@ -5,11 +5,19 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
+import com.sky.service.WorkspaceService;
 import com.sky.vo.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -28,6 +36,8 @@ public class ReportServiceImpl implements ReportService {
     private OrderMapper orderMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    WorkspaceService workspaceService;
 
     /**
      * 统计指定时间区间内的营业额数据
@@ -210,4 +220,65 @@ public class ReportServiceImpl implements ReportService {
                 .build();
     }
 
+    /**
+     * 导出运营数据报表
+     * @param response
+     */
+    @Override
+    public void exportBusinessData(HttpServletResponse response) {
+        //获取过去30天的数据
+        LocalDate beginTime = LocalDate.now().minusDays(30);
+        //截至到昨天
+        LocalDate endTime = LocalDate.now().minusDays(1);
+
+        LocalDateTime begin = LocalDateTime.of(beginTime, LocalTime.MIN);
+        LocalDateTime end = LocalDateTime.of(endTime, LocalTime.MAX);
+        //将获得的数据用BusinessDataVO封装
+        BusinessDataVO businessDataVO = workspaceService.getBusinessData(begin, end);
+
+        //通过POI将数据写入到excel中
+        //获取当前类的类加载器,获取资源路径为"template/运营数据报表.xlsx"的资源,以输入流的方式返回
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("template/运营数据报表.xlsx");
+        try {
+            //创建一个excel对象
+            XSSFWorkbook excel = new XSSFWorkbook(inputStream);
+            //获取表格文件的sheet页
+            XSSFSheet sheet = excel.getSheet("sheet1");
+            //获取第二行的第二个空格并填充时间
+            sheet.getRow(1).getCell(1).setCellValue("时间:" + beginTime + "至" + endTime);
+
+            //获得表中第四行,下面都是依次类推了,计算机都是从索引0开始,只需根据目标空表表格填写就行
+            XSSFRow row = sheet.getRow(3);
+            row.getCell(2).setCellValue(businessDataVO.getTurnover());
+            row.getCell(4).setCellValue(businessDataVO.getOrderCompletionRate());
+            row.getCell(6).setCellValue(businessDataVO.getNewUsers());
+
+            row = sheet.getRow(4);
+            row.getCell(2).setCellValue(businessDataVO.getValidOrderCount());
+            row.getCell(4).setCellValue(businessDataVO.getUnitPrice());
+
+            //使用循环自动填充每日明细
+            for (int i = 0; i < 30; i++) {
+                //每天加1
+                LocalDate date = beginTime.plusDays(1);
+                //获取某行
+                row = sheet.getRow(7 + i);
+                row.getCell(1).setCellValue(date.toString());
+                row.getCell(2).setCellValue(businessDataVO.getTurnover());
+                row.getCell(3).setCellValue(businessDataVO.getValidOrderCount());
+                row.getCell(4).setCellValue(businessDataVO.getOrderCompletionRate());
+                row.getCell(5).setCellValue(businessDataVO.getUnitPrice());
+                row.getCell(6).setCellValue(businessDataVO.getNewUsers());
+            }
+            //通过输出流将Excel文件下载到客户端浏览器
+            ServletOutputStream outputStream = response.getOutputStream();
+            excel.write(outputStream);
+            //关闭资源
+            outputStream.close();
+            excel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 }

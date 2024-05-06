@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 
 /**
@@ -93,6 +94,17 @@ public class ReportController {
         log.info("查询销量排名top10的时间范围:{},{}", begin, end);
         SalesTop10ReportVO salesTop10ReportVO = reportService.getTop10ReportVOResult(begin, end);
         return Result.success(salesTop10ReportVO);
+    }
+
+    /**
+     * 导出运营数据报表
+     * 因为是下载到浏览器中,需要一个输出流,所以通过http响应请求中获取
+     * @param response
+     */
+    @GetMapping("/export")
+    @ApiOperation("导出运营数据报表")
+    public void export(HttpServletResponse response) {
+        reportService.exportBusinessData(response);
     }
 
 }
